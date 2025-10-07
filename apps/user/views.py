@@ -4,6 +4,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .serializers import (
     UserSerializer,
@@ -21,12 +23,18 @@ class RegisterView(generics.CreateAPIView):
     permission_classes = [AllowAny]
     serializer_class = RegisterSerializer
 
+    @swagger_auto_schema(
+        tags=['Auth'],
+        operation_description="Registra um novo usuário e retorna tokens JWT"
+    )
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         
-        # Gera tokens JWT
         refresh = RefreshToken.for_user(user)
         
         return Response({
@@ -43,6 +51,9 @@ class LogoutView(APIView):
     """View para logout (blacklist do refresh token)"""
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        tags=['Auth'],
+    )
     def post(self, request):
         try:
             refresh_token = request.data.get("refresh")
@@ -59,7 +70,7 @@ class LogoutView(APIView):
                 {"message": "Logout realizado com sucesso."},
                 status=status.HTTP_200_OK
             )
-        except Exception as e:
+        except Exception:
             return Response(
                 {"error": "Token inválido ou expirado."},
                 status=status.HTTP_400_BAD_REQUEST
@@ -70,6 +81,24 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
     """View para visualizar e atualizar perfil do usuário"""
     permission_classes = [IsAuthenticated]
     serializer_class = UserSerializer
+
+    @swagger_auto_schema(
+        tags=['Auth'],
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        tags=['Auth'],
+    )
+    def put(self, request, *args, **kwargs):
+        return super().put(request, *args, **kwargs)
+
+    @swagger_auto_schema(
+        tags=['Auth'],
+    )
+    def patch(self, request, *args, **kwargs):
+        return super().patch(request, *args, **kwargs)
 
     def get_object(self):
         return self.request.user
@@ -87,3 +116,23 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
             'user': UserSerializer(self.get_object()).data,
             'message': 'Perfil atualizado com sucesso!'
         })
+
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    @swagger_auto_schema(
+        tags=['Auth'],
+        operation_id='auth_login',
+        operation_description='Obtém tokens de acesso e refresh'
+    )
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
+
+
+class CustomTokenRefreshView(TokenRefreshView):
+    @swagger_auto_schema(
+        tags=['Auth'],
+        operation_id='auth_token_refresh',
+        operation_description='Atualiza o token de acesso usando o refresh token'
+    )
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)

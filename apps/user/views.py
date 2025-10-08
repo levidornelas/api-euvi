@@ -10,7 +10,6 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .serializers import (
     UserSerializer,
     RegisterSerializer,
-    ChangePasswordSerializer,
     UpdateProfileSerializer
 )
 

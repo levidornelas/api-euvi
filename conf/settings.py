@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'drf_yasg',
+    'storages',
 
     'apps.api',
     'apps.media_items',

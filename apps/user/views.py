@@ -6,8 +6,16 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
+from dj_rest_auth.registration.views import SocialLoginView
 
-from .serializers import UserSerializer, RegisterSerializer, UpdateProfileSerializer
+from .serializers import (
+    UserSerializer,
+    RegisterSerializer,
+    UpdateProfileSerializer,
+    GoogleLoginSerializer,
+    SocialAuthResponseSerializer
+)
 
 User = get_user_model()
 
@@ -136,3 +144,42 @@ class CustomTokenRefreshView(TokenRefreshView):
     )
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
+
+
+class GoogleLoginView(SocialLoginView):
+    """View para login com Google OAuth2"""
+
+    adapter_class = GoogleOAuth2Adapter
+    permission_classes = [AllowAny]
+    serializer_class = GoogleLoginSerializer
+
+    @swagger_auto_schema(
+        tags=["Auth"],
+        operation_description="Login com Google usando access_token do OAuth2",
+        request_body=GoogleLoginSerializer,
+    )
+    def post(self, request, *args, **kwargs):
+        # Valida o serializer de entrada
+        input_serializer = self.get_serializer(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
+
+        # Executa o login social
+        response = super().post(request, *args, **kwargs)
+
+        # Se o login foi bem-sucedido, gera tokens JWT
+        if response.status_code == 200:
+            try:
+                user = input_serializer.get_user_from_social_account()
+
+                response_serializer = SocialAuthResponseSerializer()
+                data = response_serializer.create_tokens_response(user)
+
+                return Response(data, status=status.HTTP_200_OK)
+
+            except Exception as e:
+                return Response(
+                    {"error": str(e)},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        return response

@@ -2,25 +2,22 @@ services:
   web:
     build: .
     container_name: django_app
-    command: 
-      sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    command: sh -c "python manage.py makemigrations && python manage.py migrate && python manage.py collectstatic --noinput && gunicorn conf.wsgi:application --bind 0.0.0.0:8000"
     volumes:
       - .:/app
     ports:
       - "8000:8000"
     depends_on:
       - db
-    environment:
-      - DATABASE_URL=postgresql://levi:levi@db:5432/euvi
-
+    env_file:
+      - .env
+  
   db:
     image: postgres:15
     container_name: postgres_db
     restart: always
-    environment:
-      POSTGRES_DB: euvi
-      POSTGRES_USER: levi
-      POSTGRES_PASSWORD: levi
+    env_file:
+      - .env
     ports:
       - "5432:5432"
     volumes:
